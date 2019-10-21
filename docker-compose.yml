@@ -1,0 +1,50 @@
+version: '3' 
+services:
+  load-balance-nginx:
+        build: ./nginx-frontend
+        image: load-balance-nginx:latest
+        ports:
+            - "8080:80"
+        #    - 8081:8081
+        restart: unless-stopped
+  node1:
+        depends_on:
+            - load-balance-nginx
+            - mariadb-crm
+            - redis-crm
+        build: ./node-app
+        image: load-balanced-app:latest
+        #volumes:
+        #   - /var/www/html/apps/config:/var/www/html/apps/config
+        restart: unless-stopped
+        ports:
+            - "8081:8080"
+        environment:
+            - MESSAGE=MyFirst
+        #command: npm start
+  node2:
+        depends_on:
+            - load-balance-nginx
+            - mariadb-crm
+            - redis-crm
+        build: ./node-app
+        image: load-balanced-app:latest
+        #volumes:
+        #   - /var/www/html/apps/config:/var/www/html/apps/config
+        restart: unless-stopped
+        ports:
+            - "8082:8080"
+        environment:
+            - MESSAGE=MySecond      
+        #command: npm start
+  redis-crm:     
+        build: ./redis-server 
+        image: redis-crm:latest
+  mariadb-crm: 
+       build: ./mariadb-server     
+       image:  mariadb-crm:latest
+       environment:   
+        - ALLOW_EMPTY_PASSWORD=yes       
+        - MARIADB_USER=ticketing       
+        - MARIADB_PASSWORD=ticketapp       
+        - MARIADB_DATABASE=czcrm_generic   

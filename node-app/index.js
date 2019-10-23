@@ -17,37 +17,50 @@ const client = redis.createClient({
 
 //Set initial visits
 client.set('visits', 1);
-client.set('users', 'shivam');
+
 //defining the root endpoint
 app.get('/', (req, res) => {
-    
     client.get('visits', (err, visits) => {
         res.send(`${process.env.MESSAGE} Number of visits is: ${visits}`)
         const count = parseInt(visits) + 1;
         client.set('visits', count)
     })
-})
-
-app.get('/users', (req, res) => {
-    client.get('users', (err, users) => {
-        res.send('USERS : ' + users)
-        client.set('users', 'Suzi')
-    })
+    pool.getConnection()
+    .then(conn => {    
+          conn.query("TRUNCATE users"); 
+    }).catch(err => {
+      //not connected
+    });
 })
 
 app.get('/users/:userName', (req, res) => {
-      client.set('users', req.params.userName)
-      res.send('USERS set in redis : ' + req.params.userName)
+
+       client.get('visits', (err, visits) => {
+         const sql = `INSERT INTO users (visit, name) VALUES (${visits}, '${req.params.userName}')`;
+         pool.getConnection().then(conn => {  
+             conn.query(sql).then((data) => {
+             res.send(`${process.env.MESSAGE} DB STATUS : ${JSON.stringify(data)}`)
+             conn.end();
+             })
+         }).catch(err => {
+         //not connected
+         });
+         
+       });
+   
 })
 
-app.get('/test', (req, res) => {
-    
+app.get('/users', (req, res) => {
+  client.get('visits', (err, visits) => {
+    const count = parseInt(visits) + 1;
+    client.set('visits', count)
+})
   pool.getConnection()
     .then(conn => {    
-          conn.query("CREATE TABLE IF NOT EXISTS test (id int, val varchar(255))");
-          conn.query("SELECT * from test").then((data) => {
+          conn.query("CREATE TABLE IF NOT EXISTS users (visit int, name varchar(255))");
+          conn.query("SELECT * from users").then((data) => {
           console.log(data); // { affectedRows: 1, insertId: 1, warningStatus: 0 }
-          res.send(JSON.stringify(data))
+          res.send(`${process.env.MESSAGE} and Data : ${JSON.stringify(data)}`)
           conn.end();
         })
         .catch(err => {
@@ -59,8 +72,6 @@ app.get('/test', (req, res) => {
     }).catch(err => {
       //not connected
     });
-      
-
 })
 
 //specifying the listening port
